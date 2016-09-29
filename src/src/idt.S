@@ -128,6 +128,66 @@ entry32:
 	pushq $0
 	pushq $32
 	jmp common
+entry33:
+	pushq $0
+	pushq $33
+	jmp common
+entry34:
+	pushq $0
+	pushq $34
+	jmp common
+entry35:
+	pushq $0
+	pushq $35
+	jmp common
+entry36:
+	pushq $0
+	pushq $36
+	jmp common
+entry37:
+	pushq $0
+	pushq $37
+	jmp common
+entry38:
+	pushq $0
+	pushq $38
+	jmp common
+entry39:
+	pushq $0
+	pushq $39
+	jmp common
+entry40:
+	pushq $0
+	pushq $40
+	jmp common
+entry41:
+	pushq $0
+	pushq $41
+	jmp common
+entry42:
+	pushq $0
+	pushq $42
+	jmp common
+entry43:
+	pushq $0
+	pushq $43
+	jmp common
+entry44:
+	pushq $0
+	pushq $44
+	jmp common
+entry45:
+	pushq $0
+	pushq $45
+	jmp common
+entry46:
+	pushq $0
+	pushq $46
+	jmp common
+entry47:
+	pushq $0
+	pushq $47
+	jmp common
 
 common:
 	pushq %rax
@@ -176,3 +236,18 @@ table:
 	.quad entry30
 	.quad entry31
 	.quad entry32
+	.quad entry33
+	.quad entry34
+	.quad entry35
+	.quad entry36
+	.quad entry37
+	.quad entry38
+	.quad entry39
+	.quad entry40
+	.quad entry41
+	.quad entry42
+	.quad entry43
+	.quad entry44
+	.quad entry45
+	.quad entry46
+	.quad entry47

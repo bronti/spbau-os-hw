@@ -2,8 +2,14 @@
 #include "serial.h"
 #include <stdlib.h>
 #include "memory.h"
+#include "ioport.h"
 
 uint16_t the_table[8 * IDT_SIZE];
+
+#define MASTER_COMMAND_PORT ((unsigned short) 0x20)
+#define MASTER_DATA_PORT    ((unsigned short) 0x21)
+#define SLAVE_COMMAND_PORT  ((unsigned short) 0xA0)
+#define SLAVE_DATA_PORT     ((unsigned short) 0xA1)
 
 void c_handler(void) 
 { 
@@ -37,4 +43,22 @@ void init_idt(void)
     }
     struct desc_table_ptr idt_desc = {2 * IDT_SIZE * sizeof(uint64_t) - 1, (uint64_t) the_table};
     write_idtr(&idt_desc);
+} 
+
+void init_controller(void)
+{
+    out8(0x11, MASTER_COMMAND_PORT);  // 3b of data, cascade, edge triggered
+    out8(0x11, SLAVE_COMMAND_PORT);   
+
+    out8(32, MASTER_DATA_PORT);       // first idt entry
+    out8(40, SLAVE_DATA_PORT);
+
+    out8(0x4, MASTER_DATA_PORT);      // slave port
+    out8(2, SLAVE_DATA_PORT);         // master's port
+
+    out8(0x1, MASTER_DATA_PORT);      // no idea
+    out8(0x1, SLAVE_DATA_PORT);         
+
+    out8(0xfb, MASTER_DATA_PORT);      // mask it all
+    out8(0xff, SLAVE_DATA_PORT);         
 }

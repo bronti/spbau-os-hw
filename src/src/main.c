@@ -17,14 +17,15 @@ void interrupt(void);
 void main(void)
 {
 	qemu_gdb_hang();
+    disable_ints();
 
     init_serial();
     write_to_serial("Hello World!\n");
 
     init_idt();
-    disable_ints();
 
-    // __asm__ ("int $0" : :); // test interruptions
+    __asm__ ("int $0" : :);                      // test interruptions
+    write_to_serial("Interruption tested.\n");
     
 
 	while (1);
