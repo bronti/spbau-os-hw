@@ -1,6 +1,6 @@
 
 	.text 
-	.extern c_handler
+	.extern handle_interruption
 	.global table
 
 entry0:
@@ -192,11 +192,23 @@ entry47:
 common:
 	pushq %rax
 	pushq %rdi
-	pushq %rbx
+	pushq %rcx
+	pushq %rdx
+	pushq %rsi
+	pushq %r8
+	pushq %r9
+	pushq %r10
+	pushq %r11
 	movq %rsp, %rdi
 	cld
-	call c_handler
-	popq %rbx
+	call handle_interruption
+	popq %r11
+	popq %r10
+	popq %r9
+	popq %r8
+	popq %rsi
+	popq %rdx
+	popq %rcx
 	popq %rdi
 	popq %rax
 	addq $16, %rsp
