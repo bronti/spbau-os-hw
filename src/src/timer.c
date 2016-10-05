@@ -2,7 +2,7 @@
 #include "ioport.h"
 
 #define PIT_MASTER_PORT ((unsigned short) 0x43)
-#define PIT_DATA_PORT ((unsigned short) 0x42)
+#define PIT_DATA_PORT ((unsigned short) 0x40)
 
 void init_pit(void)
 {
