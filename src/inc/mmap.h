@@ -1,6 +1,6 @@
 #pragma once
 
-#define MMAP_FLAG 6
+#define MMAP_FLAG (1 << 6)
 
 #include "multiboot_info.h"
 

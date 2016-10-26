@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include "serial.h"
 
-int check_flag(uint32_t flags, int bit)
+int check_flag(uint32_t flags, uint32_t flag)
 {
-    return (flags & (1 << bit)) != 0;
+    return (flags & flag) != 0;
 }
 
 void show_mmap(mb_info_t * mb_info) 
