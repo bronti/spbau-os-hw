@@ -31,7 +31,10 @@ void main(mb_info_t * mb_info)
     init_pic();
     enable_ints();
 
-    handle_mmap(mb_info);
+    if (!handle_mmap(mb_info))
+    {
+        return;
+    }
 
     // init_pit();
     // mask_pic(0xfe, 1);
