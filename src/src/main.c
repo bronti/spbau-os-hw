@@ -7,35 +7,35 @@ static void qemu_gdb_hang(void)
 #endif
 }
 
+// #include <unistd.h> 
+
 #include "serial.h"
+#include "mmap.h"
 #include "interruptions.h"
 #include "timer.h"
+#include "multiboot_info.h"
 #include <desc.h>
 #include <ints.h>
 
 void interrupt(void);
 
-void main(void)
+void main(mb_info_t * mb_info)
 {
+    // write_num_to_serial((uint64_t)(uintptr_t)mb_info, '\n');    
+
 	qemu_gdb_hang();
 
     init_serial();
-    write_to_serial("Hello World!\n");
 
     init_idt();
     init_pic();
     enable_ints();
 
-    init_pit();
-    mask_pic(0xfe, 1);
+    show_mmap(mb_info);
 
-    // __asm__ ("int $0" : :);                      // test interruptions
-    // __asm__ ("int $18" : :);                     // test interruptions
-    // int m = 0;
-    // int n = 4/ m;
-    // n = m;
-    // m = n;
-    write_to_serial("I'm alive!\n");
+    // init_pit();
+    // mask_pic(0xfe, 1);
 
+    write_to_serial("I'm still alive!\n");
 	while (1);
 }

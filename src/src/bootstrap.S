@@ -1,7 +1,7 @@
 #include <memory.h>
 
 #define MB_HEADER_MAGIC	0x1BADB002
-#define MB_HEADER_FLAGS	((1 << 16) | (1 << 1))
+#define MB_HEADER_FLAGS	((1 << 16) | (1 << 1) | (1 << 0))
 #define MB_HEADER_CKSUM	-(MB_HEADER_MAGIC + MB_HEADER_FLAGS)
 
 	.section .bootstrap, "ax"
@@ -55,9 +55,12 @@ stack_top:
 
 1:
 	movl $stack_top, %esp
+	pushl %ebx
+
 	pushl %eax
 	call videomem_clrscr
 	popl %eax
+
 	cmpl $0x2badb002, %eax
 	je 1f
 
@@ -89,14 +92,17 @@ stack_top:
 	call videomem_puts
 	addl $4, %esp
 
+	popl %ebx
+
 	lidt idt_ptr
 	lgdt gdt_ptr
 	movw $0x10, %ax
-	movw %ax, %ds
+	movw %ax, %ds 
 	movw %ax, %es
 	movw %ax, %fs
 	movw %ax, %gs
 	movw %ax, %ss
+
 	ljmpl $0x08, $start64
 
 
@@ -135,6 +141,7 @@ setup_mapping:
 	movl $(bootstrap_pml4 - VIRTUAL_BASE), %edi
 	movl $(bootstrap_pml3 - VIRTUAL_BASE + PTE_PRESENT + PTE_WRITE), %eax
 	movl %eax, (%edi)
+	movl %eax, 2048(%edi)
 	movl %eax, 4088(%edi)
 
 	movl %cr4, %eax
@@ -223,9 +230,13 @@ start64:
 	movabsq $bootstrap_stack_top, %rax
 	movq %rax, %rsp
 
+	xorq %rdi, %rdi
+    movl %ebx, %edi
 	cld
 	movabsq $main, %rax
 	call *%rax
+
+	addq $8, %rsp
 
 	cli
 1:
@@ -242,3 +253,4 @@ bootstrap_pml4:
 	.space PAGE_SIZE
 bootstrap_pml3:
 	.space PAGE_SIZE
+
