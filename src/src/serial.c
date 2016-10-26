@@ -18,7 +18,7 @@ int serial_is_busy()
    return (in8(SERIAL_PORT + 5) & 0x20) == 0;
 }
 
-void write_to_serial(char str[]) 
+void write_to_serial(const char str[]) 
 {
     for (int i = 0; str[i]; ++i)
     {
@@ -27,7 +27,7 @@ void write_to_serial(char str[])
     }
 }
 
-void write_i_to_serial(char str[], int count) 
+void write_i_to_serial(const char str[], int count) 
 {
     for (int i = 0; i < count; ++i)
     {
