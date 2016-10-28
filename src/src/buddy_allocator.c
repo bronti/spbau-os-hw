@@ -129,6 +129,35 @@ uint64_t get_free_block(int exp)
     return ind;
 }
 
+void init_before(int max_exp, uint64_t entry_end, uint64_t start)
+{
+    int exp;
+    uint64_t block_start;
+    for (exp = max_exp; exp >= 0; --exp)
+    {
+        uint64_t block_size = block_size_from_exp(exp);
+        block_start = entry_end - block_size;
+        if (block_start < start) continue;
+        free_block_by_ind(block_ind(block_start, exp), exp);
+        break;
+    }
+    if (exp >= 1 && block_start > start)
+    {
+        init_before(exp - 1, block_start, start);
+    }
+}
+
+void init_after(int max_exp, uint64_t start, uint64_t entry_end)
+{
+    for (int exp = max_exp; exp >= 0; --exp)
+    {
+        uint64_t block_size = block_size_from_exp(exp);
+        if (start + block_size > entry_end) continue;
+        free_block_by_ind(block_ind(start, exp), exp);
+        start += block_size;
+    }
+}
+
 int init_buddy_allocator(mb_info_t * mb_info)
 {    
     uint64_t descriptors_mem = sizeof(struct block) * BLOCKS_COUNT;
@@ -166,15 +195,26 @@ int init_buddy_allocator(mb_info_t * mb_info)
         uint64_t entry_end = entry->addr + entry->len;
         uint64_t start = entry->addr;
 
-        // todo: while, log2
-        for (int32_t exp = BLOCK_EXP; exp >= 0; --exp)
+        int32_t exp;
+        uint64_t gap;
+        uint64_t block_size;
+        for (exp = BLOCK_EXP; exp >= 0; --exp)
         {
-            uint64_t block_size = block_size_from_exp(exp);
-            uint64_t gap = start % block_size == 0 ? 0 : (block_size - start % block_size);
+            block_size = block_size_from_exp(exp);
+            gap = start % block_size == 0 ? 0 : (block_size - start % block_size);
             if (start + gap + block_size > entry_end) continue;
-            start += gap;
-            free_block_by_ind(block_ind(start, exp), exp);
-            start += block_size;
+            // start += gap;
+            free_block_by_ind(block_ind(start + gap, exp), exp);
+            // start += block_size;
+            break;
+        }
+        if (exp >= 1 && gap > 0)
+        {
+            init_before(exp - 1, start + gap, start);
+        }
+        if (exp >= 1 && start + gap + block_size < entry_end)
+        {
+            init_after(exp - 1, start + gap + block_size, entry_end);
         }
     }
     return 1;
