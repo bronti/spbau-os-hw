@@ -50,7 +50,7 @@ void main(mb_info_t * mb_info)
         write_to_serial("Something wrong with buddy.");
         return;
     }
-    show_buddies();
+    // show_buddies();
 
     write_to_serial("I'm still alive!\n");
 	while (1);
