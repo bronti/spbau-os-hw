@@ -10,6 +10,8 @@ static void qemu_gdb_hang(void)
 // #include <unistd.h> 
 
 #include "serial.h"
+#include "paging.h"
+#include "buddy_allocator.h"
 #include "mmap.h"
 #include "interruptions.h"
 #include "timer.h"
@@ -18,6 +20,8 @@ static void qemu_gdb_hang(void)
 #include <ints.h>
 
 void interrupt(void);
+
+uint64_t to_phys(uint64_t addr);
 
 void main(mb_info_t * mb_info)
 {
@@ -33,11 +37,19 @@ void main(mb_info_t * mb_info)
 
     if (!handle_mmap(mb_info))
     {
+        write_to_serial("Something wrong with mmap.");
         return;
     }
 
     // init_pit();
     // mask_pic(0xfe, 1);
+
+    // init_paging(mb_info);
+    if (!init_buddy_allocator(mb_info))
+    {
+        write_to_serial("Something wrong with buddy.");
+        return;
+    }
 
     write_to_serial("I'm still alive!\n");
 	while (1);

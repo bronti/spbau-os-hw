@@ -4,6 +4,8 @@
 #include "string.h"
 #include "serial.h"
 
+#define MMAP_ADDITIONAL_ENTRIES 7
+
 int check_flag(uint32_t flags, uint32_t flag)
 {
     return (flags & flag) != 0;
@@ -77,7 +79,7 @@ int restore_mmap(mb_info_t * mb_info, uint64_t os_begin, uint64_t os_end)
     uint64_t mmap_end   = mmap_begin + mmap_size;
     uint64_t mmap_entry_size = ((mb_memory_map_t *) mmap_begin)->size +
                                sizeof(((mb_memory_map_t *) mmap_begin)->size);
-    uint64_t mmap_max_size = mmap_size + 3 * mmap_entry_size;
+    uint64_t mmap_max_size = mmap_size + MMAP_ADDITIONAL_ENTRIES * mmap_entry_size;
 
     mb_memory_map_t * entry;
     for(entry = (mb_memory_map_t *) mmap_begin; 
@@ -100,6 +102,30 @@ int restore_mmap(mb_info_t * mb_info, uint64_t os_begin, uint64_t os_end)
     reserve_memory_block(mb_info, mb_info->mmap_addr, mmap_max_size);
 
     return 1;
+}
+
+uint64_t find_mem(mb_info_t * mb_info, uint64_t size, uint64_t align)
+{
+    uint64_t mmap_begin = (uint64_t) mb_info->mmap_addr;
+    uint64_t mmap_size  = (uint64_t) mb_info->mmap_length;
+    uint64_t mmap_end   = mmap_begin + mmap_size;
+    uint64_t mmap_entry_size = ((mb_memory_map_t *) mmap_begin)->size +
+                               sizeof(((mb_memory_map_t *) mmap_begin)->size);
+
+    mb_memory_map_t * entry;
+    for(entry = (mb_memory_map_t *) mmap_begin; 
+        (uint64_t) entry < mmap_end; 
+        entry = (mb_memory_map_t *)((uint64_t) entry + mmap_entry_size))
+    {
+        if (entry->type == MB_MEMORY_RESERVED) continue;
+        uint64_t gap = entry->addr % align == 0 ? 0 : (align - entry->addr % align);
+        uint64_t start = entry->addr + gap;
+        if (entry->addr + entry->len < start + size) continue;
+
+        reserve_memory_block(mb_info, start, size);
+        return start;
+    }
+    return 0;
 }
 
 void show_mmap(mb_info_t * mb_info) 
@@ -134,6 +160,10 @@ void show_mmap(mb_info_t * mb_info)
 
 int handle_mmap(mb_info_t * mb_info)
 {
+    if (0)
+    {
+        mb_info = mb_info + 1;
+    }
     extern char text_phys_begin;
     // extern char data_phys_end;
     extern char bss_phys_end;
