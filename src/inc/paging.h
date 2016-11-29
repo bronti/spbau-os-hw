@@ -1,14 +1,30 @@
-#pragma once
+#ifndef __PAGING_H__
+#define __PAGING_H__
 
-#include "multiboot_info.h"
+#include <stdint.h>
+#include <rbtree.h>
 
-struct paging_entry
-{
-    uint64_t data;
-} __attribute__((packed));
-typedef struct paging_entry pml4_entry_t;
-typedef struct paging_entry pdpt_entry_t;
-typedef struct paging_entry pdt_entry_t;
+#define __PTE_PRESENT	((pte_t)1 << 0)
+#define __PTE_LARGE	((pte_t)1 << 7)
+
+#define PTE_WRITE	((pte_t)1 << 1)
+#define PTE_USER	((pte_t)1 << 2)
+
+#define PTE_PHYS_MASK	((pte_t)0xffffffffff000)
+#define PTE_FLAGS_MASK	(~PTE_PHYS_MASK)
+
+#define PT_ENTRIES	512
 
 
-void init_paging(mb_info_t * mb_info);
+typedef uint64_t pte_t;
+
+void paging_setup(void);
+
+
+struct page;
+
+void *kmap(struct page **pages, size_t count);
+void kunmap(void *ptr);
+void kmap_setup(void);
+
+#endif /*__PAGING_H__*/

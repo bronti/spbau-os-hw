@@ -1,60 +1,47 @@
-// #include <sys/io.h>
-#include "serial.h"
-#include "ioport.h"
+#include <serial.h>
+#include <ioport.h>
 
-#define SERIAL_PORT ((unsigned short) 0x3f8)
+#define SERIAL_BASE_PORT	0x3f8
+#define SERIAL_PORT(x)		(SERIAL_BASE_PORT + (x))
+#define REG_DATA		SERIAL_PORT(0)
+#define REG_DLL			SERIAL_PORT(0)
+#define REG_IER			SERIAL_PORT(1)
+#define REG_DLH			SERIAL_PORT(1)
+#define REG_LCR			SERIAL_PORT(3)
+#define REG_LSR			SERIAL_PORT(5)
 
-void init_serial() 
+#define LCR_8BIT		(3 << 0)
+#define LCR_DLAB		(1 << 7)
+#define LSR_TX_READY		(1 << 5)
+
+
+void serial_setup(void)
 {
-   out8(SERIAL_PORT + 1, 0x00); // disable interruptions
-   out8(SERIAL_PORT + 3, 0x80); // to set speed in +0 and +1
-   out8(SERIAL_PORT + 0, 0x01); // low byte of speed  (speed = 115200)
-   out8(SERIAL_PORT + 1, 0x00); // high byte of speed
-   out8(SERIAL_PORT + 3, 0x03); // frame size = 8, 1 stop bit 
+	/* Step by step explanation:
+	 *   1. i want to disable interrupt, in order to do that i need access
+	 *      to the IER, before writing IER we need to drop DLAB bit in the
+	 *      LCR, so at first i write 0 to LCR, and then write 0 to IER; */
+	out8(REG_LCR, 0);
+	out8(REG_IER, 0);
+	/*   2. now i want to set speed, let say, to 9600 baud,
+	 *      115200/9600 = 12 - is our divisor, but before setting divisor,
+	 *      we need to set DLAB bit in the LCR; */
+	out8(REG_LCR, LCR_DLAB);
+	out8(REG_DLL, 0x0C);
+	out8(REG_DLH, 0x00);
+	/*   3. finally i want to set frame format, there is no tricky parts
+	 *      here. */
+	out8(REG_LCR, LCR_8BIT);
 }
 
-int serial_is_busy() 
+void serial_putchar(int c)
 {
-   return (in8(SERIAL_PORT + 5) & 0x20) == 0;
+	while (!(in8(REG_LSR) & LSR_TX_READY));
+	out8(REG_DATA, c);
 }
 
-void write_to_serial(const char str[]) 
+void serial_write(const char *buf, size_t size)
 {
-    for (int i = 0; str[i]; ++i)
-    {
-        while (serial_is_busy());
-        out8(SERIAL_PORT + 0, str[i]);
-    }
-}
-
-void write_i_to_serial(const char str[], int count) 
-{
-    for (int i = 0; i < count; ++i)
-    {
-        while (serial_is_busy());
-        out8(SERIAL_PORT + 0, str[i]);
-    }
-}
-
-void write_num_to_serial(uint64_t num, char ending)//, int base = 10) 
-{
-    char str_num_buff[20];
-    int strlen = 0;
-    if (num == 0) 
-    {
-        str_num_buff[0] = '0';
-        strlen = 1;
-    }
-    else 
-    {
-        for (; num > 0 && strlen < 20; num /= 10, ++strlen)
-        {
-            str_num_buff[strlen] = '0' + (num % 10);
-        }
-    }
-    for (; strlen > 0; --strlen)
-    {
-        write_i_to_serial(&str_num_buff[strlen - 1], 1);
-    }
-    write_i_to_serial(&ending, 1);
+	for (size_t i = 0; i != size; ++i)
+		serial_putchar(buf[i]);
 }

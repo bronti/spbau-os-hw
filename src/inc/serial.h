@@ -1,9 +1,10 @@
-#pragma once 
+#ifndef __SERIAL_H__
+#define __SERIAL_H__
 
-#include <stdint.h>
+#include <stddef.h>
 
-void init_serial();
-int serial_is_busy();
-void write_to_serial(const char str[]);
-void write_i_to_serial(const char str[], int count);
-void write_num_to_serial(uint64_t num, char ending);
+void serial_setup(void);
+void serial_putchar(int c);
+void serial_write(const char *buf, size_t size);
+
+#endif /*__SERIAL_H__*/

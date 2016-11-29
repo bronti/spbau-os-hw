@@ -1,22 +1,28 @@
-#include "string.h"
+#include <string.h>
 
-void memmove(void * dest, void * src, uint64_t len)
+size_t strlen(const char *str)
 {
-    char * where = dest;
-    char * from = src;
+	const char *begin = str;
 
-    if (from >= where || from + len <= where)
-    {
-        for (uint64_t i = 0; i < len; ++i)
-        {
-            where[i] = from[i];
-        }
-    } 
-    else
-    {        
-        for (uint64_t i = len; i > 0; --i)
-        {
-            where[i - 1] = from[i - 1];
-        }
-    }
+	while (*str++);
+	return str - begin - 1;
+}
+
+void *memcpy(void *dst, const void *src, size_t size)
+{
+	char *to = dst;
+	const char *from = src;
+
+	while (size--)
+		*to++ = *from++;
+	return dst;
+}
+
+void *memset(void *dst, int fill, size_t size)
+{
+	char *to = dst;
+
+	while (size--)
+		*to++ = fill;
+	return dst;
 }
