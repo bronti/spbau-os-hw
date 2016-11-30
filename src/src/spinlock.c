@@ -1,12 +1,12 @@
 #include "spinlock.h"
 #include "ints.h"
 
-void lock(struct spinlock * lock)
+void lock(struct spinlock * lck)
 {
     do 
     {
-        while(atomic_load_explicit(&lock->locked, memory_order_relaxed) == LOCKED);
-    } while(atomic_exchange_explicit(&lock->locked, LOCKED, memory_order_acquire) == LOCKED);
+        while(atomic_load_explicit(&lck->locked, memory_order_relaxed) == LOCKED);
+    } while(atomic_exchange_explicit(&lck->locked, LOCKED, memory_order_acquire) == LOCKED);
 }
 
 void unlock(struct spinlock * lock)

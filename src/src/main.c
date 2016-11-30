@@ -47,102 +47,131 @@ static void qemu_gdb_hang(void)
 // 	mem_free(pages);
 // }
 
-// static void test_alloc(void)
+static void test_alloc(void)
+{
+	struct list_head head;
+	unsigned long count = 0;
+
+	list_init(&head);
+	while (1) {
+		struct list_head *node = mem_alloc(sizeof(*node));
+
+		if (!node)
+			break;
+		BUG_ON((uintptr_t)node < HIGHER_BASE);
+		++count;
+		list_add(node, &head);
+	}
+
+	printf("Allocated %lu bytes\n", count * sizeof(head));
+
+	while (!list_empty(&head)) {
+		struct list_head *node = head.next;
+
+		BUG_ON((uintptr_t)node < HIGHER_BASE);
+		list_del(node);
+		mem_free(node);
+	}
+
+	mem_alloc_shrink();
+}
+
+static void test_slab(void)
+{
+	struct list_head head;
+	struct mem_cache cache;
+	unsigned long count = 0;
+
+	list_init(&head);
+	mem_cache_setup(&cache, sizeof(head), sizeof(head));
+	while (1) {
+		struct list_head *node = mem_cache_alloc(&cache);
+
+		if (!node)
+			break;
+		BUG_ON((uintptr_t)node < HIGHER_BASE);
+		++count;
+		list_add(node, &head);
+	}
+
+	printf("Allocated %lu bytes\n", count * sizeof(head));
+
+	while (!list_empty(&head)) {
+		struct list_head *node = head.next;
+
+		BUG_ON((uintptr_t)node < HIGHER_BASE);
+		list_del(node);
+		mem_cache_free(&cache, node);
+	}
+
+	mem_cache_release(&cache);
+}
+
+static void test_buddy(void)
+{
+	struct list_head head;
+	unsigned long count = 0;
+
+	list_init(&head);
+	while (1) {
+		struct page *page = __page_alloc(0);
+
+		if (!page)
+			break;
+		++count;
+		list_add(&page->ll, &head);
+	}
+
+	printf("Allocated %lu pages\n", count);
+
+	while (!list_empty(&head)) {
+		struct list_head *node = head.next;
+		struct page *page = CONTAINER_OF(node, struct page, ll);
+
+		list_del(&page->ll);
+		__page_free(page, 0);
+	}
+}
+
+static void test_buddy_(void * par)
+{
+	(void)par;
+	test_buddy();
+}
+
+static void test_slab_(void * par)
+{
+	(void)par;
+	test_slab();
+}
+
+static void test_alloc_(void * par)
+{
+	(void)par;
+	test_alloc();
+}
+
+// static void test_kmap_(void * par)
 // {
-// 	struct list_head head;
-// 	unsigned long count = 0;
-
-// 	list_init(&head);
-// 	while (1) {
-// 		struct list_head *node = mem_alloc(sizeof(*node));
-
-// 		if (!node)
-// 			break;
-// 		BUG_ON((uintptr_t)node < HIGHER_BASE);
-// 		++count;
-// 		list_add(node, &head);
-// 	}
-
-// 	printf("Allocated %lu bytes\n", count * sizeof(head));
-
-// 	while (!list_empty(&head)) {
-// 		struct list_head *node = head.next;
-
-// 		BUG_ON((uintptr_t)node < HIGHER_BASE);
-// 		list_del(node);
-// 		mem_free(node);
-// 	}
-
-// 	mem_alloc_shrink();
+// 	(void)par;
+// 	test_kmap();
 // }
 
-// static void test_slab(void)
-// {
-// 	struct list_head head;
-// 	struct mem_cache cache;
-// 	unsigned long count = 0;
+void * fic;
 
-// 	list_init(&head);
-// 	mem_cache_setup(&cache, sizeof(head), sizeof(head));
-// 	while (1) {
-// 		struct list_head *node = mem_cache_alloc(&cache);
+struct spinlock lck = { UNLOCKED };
 
-// 		if (!node)
-// 			break;
-// 		BUG_ON((uintptr_t)node < HIGHER_BASE);
-// 		++count;
-// 		list_add(node, &head);
-// 	}
-
-// 	printf("Allocated %lu bytes\n", count * sizeof(head));
-
-// 	while (!list_empty(&head)) {
-// 		struct list_head *node = head.next;
-
-// 		BUG_ON((uintptr_t)node < HIGHER_BASE);
-// 		list_del(node);
-// 		mem_cache_free(&cache, node);
-// 	}
-
-// 	mem_cache_release(&cache);
-// }
-
-// static void test_buddy(void)
-// {
-// 	struct list_head head;
-// 	unsigned long count = 0;
-
-// 	list_init(&head);
-// 	while (1) {
-// 		struct page *page = __page_alloc(0);
-
-// 		if (!page)
-// 			break;
-// 		++count;
-// 		list_add(&page->ll, &head);
-// 	}
-
-// 	printf("Allocated %lu pages\n", count);
-
-// 	while (!list_empty(&head)) {
-// 		struct list_head *node = head.next;
-// 		struct page *page = CONTAINER_OF(node, struct page, ll);
-
-// 		list_del(&page->ll);
-// 		__page_free(page, 0);
-// 	}
-// }
 
 void add(void * x_)
 {
 	while (1)
 	{
-		global_lock();
 		int * x = (int *) x_;
-		printf("adder %d\n", &x);
+		printf("inc x\n");
+		lock(&lck);
 		*x += 1;
-		global_unlock();
-		for(uint64_t i = 0; i < (1ul << 15); ++i){}
+		unlock(&lck);
+		for(uint64_t i = 0; i < (1ul << 20); ++i);
 	}	
 }
 
@@ -150,11 +179,11 @@ void print(void * x_)
 {
 	while (1)
 	{
-		global_lock();
 		int * x = (int *) x_;
-		printf("x: %d %d\n", *x, &x);
-		global_unlock();
-		for(uint64_t i = 0; i < (1ul << 20); ++i){}
+		lock(&lck);
+		printf("x: %d\n", *x);
+		unlock(&lck);
+		for(uint64_t i = 0; i < (1ul << 20); ++i);
 	}	
 }
 
@@ -172,12 +201,16 @@ void main(void *bootstrap_info)
 	kmap_setup();
 	enable_ints();
 
-	// printf("Tests Begin\n");
-	// test_buddy();
-	// test_slab();
-	// test_alloc();
-	// test_kmap();
-	// printf("Tests Finished\n");
+	printf("Tests Begin\n");
+	thread_t * bud_th = thread_create(&test_buddy_, fic);
+	thread_t * slab_th = thread_create(&test_slab_, fic);
+	thread_t * alloc_th = thread_create(&test_alloc_, fic);
+	// thread_t * kmap_th = thread_create(&test_kmap_, fic);
+	thread_wait(bud_th);
+	thread_wait(slab_th);
+	thread_wait(alloc_th);
+	// thread_wait(kmap_th);
+	printf("Tests Finished\n");
 
 	// struct spinlock locker;
 	// lock(&locker);
@@ -187,17 +220,28 @@ void main(void *bootstrap_info)
 	// unlock(&locker);
 	// printf("Unlocked\n");
 
+
+	printf("Thread test begin.\n");
+
+
 	int * x = mem_alloc(sizeof(int));
 	*x = 0;
-	thread_t * adder = thread_create(&add, x);
 	thread_t * printer = thread_create(&print, x);
+	thread_t * adder = thread_create(&add, x);
 	(void) adder;
 	(void) printer;
 
+	for(uint64_t i = 0; i < (1ul << 25); ++i);
+	printf("Killing adder.\n");
+	thread_kill(adder);
+	for(uint64_t i = 0; i < (1ul << 21); ++i);
+	printf("Killing printer.\n");
+	thread_kill(printer);
+	thread_wait(adder);
+	thread_wait(printer);
 
-	while (1)
-	{
-		printf("Kernel\n");
-		for(uint64_t i = 0; i < (1ul << 15); ++i){}
-	}
+	mem_free(x);
+	printf("Thread test end.\n");
+
+	while(1);
 }

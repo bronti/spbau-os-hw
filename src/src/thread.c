@@ -13,6 +13,8 @@ thread_t * threads_head = 0;
 int all_started = 0;  
 int all_proc_ended = 0;  
 
+#define THREAD_STACK_SIZE 2 * PAGE_SIZE
+
 
 void thread_add(thread_t * th) 
 {
@@ -30,8 +32,8 @@ void thread_add(thread_t * th)
 thread_t * new_thread_init()
 {
     thread_t * new_thread = mem_alloc(sizeof(threads_head));
-    void * stack = mem_alloc(PAGE_SIZE);
-    new_thread->stack = (uint64_t)stack + PAGE_SIZE;
+    void * stack = mem_alloc(THREAD_STACK_SIZE);
+    new_thread->stack = (uint64_t)stack + THREAD_STACK_SIZE;
 
     new_thread->state = TH_RUNNING;
     new_thread->stack_end = (uint64_t)stack;
@@ -42,8 +44,7 @@ thread_t * new_thread_init()
 
 void thread_wrapper(void (*run)(void *), void * params)
 {
-    printf("wrapper reached\n");
-    // end of int
+    // printf("Wrapper reached.\n");
     pic_ack(PIT_IRQ);
 
     enable_ints();
@@ -84,8 +85,6 @@ thread_t * thread_create(void (*run)(void *), void * params)
     }
 
     // printf("New thread created.\n");
-    printf("New thread created. %d ", initial_stack);
-    printf("%d\n", new_thread->stack);
     enable_ints();
     return new_thread;
 }
@@ -109,7 +108,7 @@ void thread_del(thread_t * th)
 
 void thread_kill(thread_t * thread)
 {
-    printf("Eggsterminate!");
+    // printf("Eggsterminate!");
     disable_ints();
 
     thread->state = TH_DEAD;
@@ -125,13 +124,6 @@ void thread_wait(thread_t * thread)
     if ((thread_t *)thread->stack_end)
         mem_free((thread_t *)thread->stack_end);
     mem_free(thread);
-}
-
-void signal()
-{
-    int x;
-    printf("pr:%d;x:%d;prret:%d;\n", ((thread_t *)(threads_head->ll.prev))->stack, &x, 
-        ((uint64_t *)((thread_t *)(threads_head->ll.prev))->stack)[2]);
 }
 
 void switch_threads()
@@ -159,7 +151,7 @@ void switch_threads()
     }
     if (threads_head == (thread_t *)(threads_head->ll.next))
     {        
-        printf("one thread detected\n");
+        // printf("One thread detected.\n");
         enable_ints();
         return;
     }
@@ -175,18 +167,9 @@ void switch_threads()
 
     uint64_t * curr_stack = &(curr->stack);
     void * next_stack = (void *)next->stack;
-    printf("all ok ");    
 
-    printf("cu:%d;%s;curet:%d;", 
-        next_stack, next->name, 
-        ((uint64_t *)next_stack)[2]);
+    // printf("!");
     switch_threads_s((void **)curr_stack, next_stack);
-    // switch_threads_s((void **)&(((thread_t *)(threads_head->ll.prev))->stack), next_stack);
-    // printf("%d\n", *curr_stack);
-
-    int x; 
-    printf("cu:%d\n", *curr_stack);
-    printf("\ngotcha:%d\n", &x);
 
     enable_ints();
 }

@@ -2,11 +2,14 @@
 #include <string.h>
 #include <balloc.h>
 #include <debug.h>
+#include "spinlock.h"
 
 #define PAGE_FREE_OFFS	8
 #define PAGE_FREE_MASK	(1ul << PAGE_FREE_OFFS)
 #define PAGE_ORDER_MASK	(PAGE_FREE_MASK - 1)
 #define PAGE_USER_OFFS	16
+
+struct spinlock page_lock = { UNLOCKED };
  
 struct list_head page_alloc_zones;
 
@@ -266,6 +269,7 @@ struct page *__page_alloc(int order)
 	if (order > MAX_ORDER)
 		return 0;
 
+	lock(&page_lock);
 	struct list_head *head = &page_alloc_zones;
 	struct list_head *ptr;
 
@@ -275,9 +279,13 @@ struct page *__page_alloc(int order)
 		struct page *page = page_alloc_zone(zone, order);
 
 		if (page)
+		{
+			unlock(&page_lock);
 			return page;
+		}
 	}
 
+	unlock(&page_lock);
 	return 0;
 }
 
@@ -286,6 +294,7 @@ uintptr_t page_alloc(int order)
 	if (order > MAX_ORDER)
 		return 0;
 
+	lock(&page_lock);
 	struct list_head *head = &page_alloc_zones;
 	struct list_head *ptr;
 
@@ -299,9 +308,11 @@ uintptr_t page_alloc(int order)
 
 		const uintptr_t index = zone->begin + (page - zone->pages);
 
+		unlock(&page_lock);
 		return index << PAGE_SHIFT;
 	}
 
+	unlock(&page_lock);
 	return 0;
 }
 
@@ -343,6 +354,7 @@ void page_free(uintptr_t addr, int order)
 	if (!addr)
 		return;
 
+	lock(&page_lock);
 	const uintptr_t idx = addr >> PAGE_SHIFT;
 	struct page_alloc_zone *zone = page_alloc_zone_find(idx);
 
@@ -351,6 +363,7 @@ void page_free(uintptr_t addr, int order)
 	struct page *page = &zone->pages[idx - zone->begin];
 
 	page_free_zone(zone, page, order);
+	unlock(&page_lock);
 }
 
 void __page_free(struct page *page, int order)
@@ -358,7 +371,9 @@ void __page_free(struct page *page, int order)
 	if (!page)
 		return;
 
+	lock(&page_lock);
 	struct page_alloc_zone *zone = page_zone(page);
 
 	page_free_zone(zone, page, order);
+	unlock(&page_lock);
 }

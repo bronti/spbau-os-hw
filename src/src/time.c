@@ -43,7 +43,7 @@ static void pit_handler(int irq, struct frame *frame)
 {
 	(void) irq;
 	(void) frame;	
-	printf("!");
+	// printf("!");
 	if (irq == PIT_IRQ) switch_threads();
 	// int x;
 	// printf("Out of int;st:%d;\n", &x);
