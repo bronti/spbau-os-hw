@@ -9,7 +9,7 @@
 #define PAGE_ORDER_MASK	(PAGE_FREE_MASK - 1)
 #define PAGE_USER_OFFS	16
 
-struct spinlock page_lock = { UNLOCKED };
+volatile struct spinlock page_lock = { UNLOCKED };
  
 struct list_head page_alloc_zones;
 

@@ -5,6 +5,7 @@
 #include "ints.h"
 #include "time.h"
 #include "i8259a.h"
+#include "debug.h"
 
 extern void initial_thread_setup();
 extern void switch_threads_s(void ** curr, void * next);
@@ -31,15 +32,32 @@ void thread_add(thread_t * th)
 
 thread_t * new_thread_init()
 {
-    thread_t * new_thread = mem_alloc(sizeof(threads_head));
-    void * stack = mem_alloc(THREAD_STACK_SIZE);
-    new_thread->stack = (uint64_t)stack + THREAD_STACK_SIZE;
+    thread_t * new_thread = mem_alloc(sizeof(*new_thread));
+    void * stack_end = mem_alloc(THREAD_STACK_SIZE);
+    new_thread->stack = (uint64_t)stack_end + THREAD_STACK_SIZE;
 
     new_thread->state = TH_RUNNING;
-    new_thread->stack_end = (uint64_t)stack;
+    new_thread->stack_end = (uint64_t)stack_end;
     thread_add(new_thread);
 
     return new_thread;
+}
+
+void thread_setup()
+{
+    // disable_ints();
+    // add thread for kernel
+    thread_t * kernel = mem_alloc(sizeof(*kernel));
+    kernel->state = TH_RUNNING;
+    kernel->stack_end = 0;
+    kernel->stack = 0;
+    thread_add(kernel);
+    all_started = 1;
+    for (int i = 0; i < 7; ++i)
+    {
+        kernel->name[i] = "kernel"[i];      
+    }    
+    // enable_ints();
 }
 
 void thread_wrapper(void (*run)(void *), void * params)
@@ -52,7 +70,7 @@ void thread_wrapper(void (*run)(void *), void * params)
 
     disable_ints();
     thread_kill(threads_head);
-    // enable_ints();
+    enable_ints();
 
     printf("Beware zombie thread! Oo");
 }
@@ -102,7 +120,8 @@ void thread_del(thread_t * th)
     }
     else
     {
-        list_del(&(th->ll));
+        list_del((list_head_t *)th);        
+        printf("Thread deleted.\n");
     }
 }
 
@@ -111,18 +130,29 @@ void thread_kill(thread_t * thread)
     // printf("Eggsterminate!");
     disable_ints();
 
-    thread->state = TH_DEAD;
+    if (threads_head == thread)
+    {
+        thread->state = TH_DYING;
+        switch_threads();
+    }
+    else
+    {
+        thread_del(thread);
+        // printf("Going to make headshot (from outer).\n");
+        thread->state = TH_DEAD;
+        // printf("Headshot (from outer).\n");
+    }
 
-    switch_threads();
-
-    // enable_ints();
+    enable_ints();
 }
 
 void thread_wait(thread_t * thread)
 {
-    while(thread->state != TH_DEAD) {}
-    if ((thread_t *)thread->stack_end)
-        mem_free((thread_t *)thread->stack_end);
+    while(thread->state != TH_DEAD);
+    printf("Waiting succeeded on %s, %d.\n", thread->name, (uint64_t)thread);
+    BUG_ON(threads_head == thread);
+    if (thread->stack_end)
+        mem_free((void *)(thread->stack_end));
     mem_free(thread);
 }
 
@@ -135,20 +165,7 @@ void switch_threads()
         enable_ints();
         return;
     }
-    if (!all_started)
-    {
-        // add thread for kernel
-        // todo: move to init
-        thread_t * kernel = mem_alloc(sizeof(threads_head));
-        kernel->state = TH_RUNNING;
-        kernel->stack_end = 0;
-        for (int i = 0; i < 7; ++i)
-        {
-            kernel->name[i] = "kernel"[i];      
-        }
-        thread_add(kernel);
-        all_started = 1;
-    }
+    BUG_ON(!all_started)
     if (threads_head == (thread_t *)(threads_head->ll.next))
     {        
         // printf("One thread detected.\n");
@@ -157,18 +174,46 @@ void switch_threads()
     }
 
     thread_t * curr = threads_head;
-    threads_head = (thread_t *)(threads_head->ll.next);
+    threads_head = (thread_t *)(curr->ll.next);
     thread_t * next = threads_head;
 
-    if (curr->state == TH_DEAD)
+    if (curr->state == TH_DEAD )
+    {
+        printf("curr: %s\n", curr->name);
+        BUG("");
+    }
+    if (!next)
+    {
+        printf("curr: %s\n", curr->name);
+        BUG("");
+    }
+    if (next->state == TH_DEAD)
+    {
+        printf("next: %s\n", curr->name);
+        // printf("curr: %s\n", curr->name);
+        // // printf("th: %s\n", curr-name);
+        // printf("prv: %s\n", ((thread_t *)(curr->ll.prev))->name);
+        // printf("prvprv: %s\n", ((thread_t *)(((thread_t *)(curr->ll.prev))->ll.prev))->name);
+        // printf("prvnxt: %s\n", ((thread_t *)(((thread_t *)(curr->ll.prev))->ll.next))->name);
+
+        // printf("nxt: %s\n", ((thread_t *)(curr->ll.next))->name);
+        // printf("nxtnxt: %s\n", ((thread_t *)(((thread_t *)(curr->ll.next))->ll.next))->name);
+        // printf("nxtprv: %s\n", ((thread_t *)(((thread_t *)(curr->ll.next))->ll.prev))->name);
+        BUG("");
+    }
+    if (curr->state == TH_DYING)
     {
         thread_del(curr);
+
+        // printf("Going to make headshot (from switch) to %s, %d.\n", curr->name, (uint64_t)curr);
+        curr->state = TH_DEAD;
+        // printf("Headshot (from switch).\n");
     }
 
     uint64_t * curr_stack = &(curr->stack);
     void * next_stack = (void *)next->stack;
 
-    // printf("!");
+    printf("!");
     switch_threads_s((void **)curr_stack, next_stack);
 
     enable_ints();

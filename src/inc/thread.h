@@ -4,6 +4,7 @@
 
 #define TH_DEAD 0
 #define TH_RUNNING 1
+#define TH_DYING 2
 // #define TH_WAITING 2
 // #define TH_SLEEPING 3
 
@@ -38,6 +39,7 @@ struct stack_init
 } __attribute__((packed));
 typedef struct stack_init stack_init_t;
 
+void thread_setup();
 thread_t * thread_create(void (*run)(void *), void * params);
 thread_t * thread_proc_create(void (*run)());
 void thread_kill(thread_t * thread);

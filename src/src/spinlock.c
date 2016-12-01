@@ -1,7 +1,7 @@
 #include "spinlock.h"
 #include "ints.h"
 
-void lock(struct spinlock * lck)
+void lock(volatile struct spinlock * lck)
 {
     do 
     {
@@ -9,7 +9,7 @@ void lock(struct spinlock * lck)
     } while(atomic_exchange_explicit(&lck->locked, LOCKED, memory_order_acquire) == LOCKED);
 }
 
-void unlock(struct spinlock * lock)
+void unlock(volatile struct spinlock * lock)
 {
     atomic_store_explicit(&lock->locked, UNLOCKED, memory_order_release);
 }

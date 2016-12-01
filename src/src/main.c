@@ -199,17 +199,23 @@ void main(void *bootstrap_info)
 	page_alloc_setup();
 	mem_alloc_setup();
 	kmap_setup();
+	thread_setup();
 	enable_ints();
 
+	(void)test_buddy_;
+	(void)test_alloc_;
+	(void)test_slab_;
+
 	printf("Tests Begin\n");
-	thread_t * bud_th = thread_create(&test_buddy_, fic);
-	thread_t * slab_th = thread_create(&test_slab_, fic);
-	thread_t * alloc_th = thread_create(&test_alloc_, fic);
+	// thread_t * bud_th = thread_create(&test_buddy_, fic);
+	// thread_t * slab_th = thread_create(&test_slab_, fic);
+	// thread_t * alloc_th = thread_create(&test_alloc_, fic);
 	// thread_t * kmap_th = thread_create(&test_kmap_, fic);
-	thread_wait(bud_th);
-	thread_wait(slab_th);
-	thread_wait(alloc_th);
+	// thread_wait(bud_th);
+	// thread_wait(slab_th);
+	// thread_wait(alloc_th);
 	// thread_wait(kmap_th);
+	// test_alloc();
 	printf("Tests Finished\n");
 
 	// struct spinlock locker;
@@ -231,7 +237,7 @@ void main(void *bootstrap_info)
 	(void) adder;
 	(void) printer;
 
-	for(uint64_t i = 0; i < (1ul << 25); ++i);
+	for(uint64_t i = 0; i < (1ul << 26); ++i);
 	printf("Killing adder.\n");
 	thread_kill(adder);
 	for(uint64_t i = 0; i < (1ul << 21); ++i);
