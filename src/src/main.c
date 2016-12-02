@@ -159,31 +159,32 @@ static void test_alloc_(void * par)
 
 void * fic;
 
-struct spinlock lck = { UNLOCKED };
+volatile struct spinlock lck = { UNLOCKED };
 
 
 void add(void * x_)
 {
-	while (1)
+	for (int i = 0; i < 100; ++i)
 	{
 		int * x = (int *) x_;
 		printf("inc x\n");
 		lock(&lck);
 		*x += 1;
 		unlock(&lck);
-		for(uint64_t i = 0; i < (1ul << 20); ++i);
+		for(uint64_t i = 0; i < (1ul << 19); ++i);
 	}	
 }
 
 void print(void * x_)
 {
-	while (1)
+	// while (*((int *)x_) == 0);
+	for (int i = 0; i < 100; ++i)
 	{
 		int * x = (int *) x_;
 		lock(&lck);
 		printf("x: %d\n", *x);
 		unlock(&lck);
-		for(uint64_t i = 0; i < (1ul << 20); ++i);
+		for(uint64_t i = 0; i < (1ul << 19); ++i);
 	}	
 }
 
@@ -206,7 +207,7 @@ void main(void *bootstrap_info)
 	(void)test_alloc_;
 	(void)test_slab_;
 
-	printf("Tests Begin\n");
+	// printf("Tests Begin\n");
 	// thread_t * bud_th = thread_create(&test_buddy_, fic);
 	// thread_t * slab_th = thread_create(&test_slab_, fic);
 	// thread_t * alloc_th = thread_create(&test_alloc_, fic);
@@ -216,7 +217,7 @@ void main(void *bootstrap_info)
 	// thread_wait(alloc_th);
 	// thread_wait(kmap_th);
 	// test_alloc();
-	printf("Tests Finished\n");
+	// printf("Tests Finished\n");
 
 	// struct spinlock locker;
 	// lock(&locker);
@@ -237,12 +238,12 @@ void main(void *bootstrap_info)
 	(void) adder;
 	(void) printer;
 
-	for(uint64_t i = 0; i < (1ul << 26); ++i);
-	printf("Killing adder.\n");
-	thread_kill(adder);
-	for(uint64_t i = 0; i < (1ul << 21); ++i);
-	printf("Killing printer.\n");
-	thread_kill(printer);
+	// for(uint64_t i = 0; i < (1ul << 26); ++i);
+	// printf("Killing adder.\n");
+	// thread_kill(adder);
+	// for(uint64_t i = 0; i < (1ul << 21); ++i);
+	// printf("Killing printer.\n");
+	// thread_kill(printer);
 	thread_wait(adder);
 	thread_wait(printer);
 

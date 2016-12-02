@@ -42,7 +42,7 @@ typedef struct stack_init stack_init_t;
 void thread_setup();
 thread_t * thread_create(void (*run)(void *), void * params);
 thread_t * thread_proc_create(void (*run)());
-void thread_kill(thread_t * thread);
+void thread_kill();
 void thread_wait(thread_t * thread);
 
 void switch_threads();

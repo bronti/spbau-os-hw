@@ -14,12 +14,12 @@ void unlock(volatile struct spinlock * lock)
     atomic_store_explicit(&lock->locked, UNLOCKED, memory_order_release);
 }
 
-void global_lock()
-{
-    disable_ints();
-}
+// void global_lock()
+// {
+//     disable_ints();
+// }
 
-void global_unlock()
-{
-    enable_ints();
-}
+// void global_unlock()
+// {
+//     enable_ints();
+// }

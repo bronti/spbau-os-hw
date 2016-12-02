@@ -15,5 +15,5 @@ struct spinlock
 void lock(volatile struct spinlock * lock);
 void unlock(volatile struct spinlock * lock);
 
-void global_lock();
-void global_unlock();
+// void global_lock();
+// void global_unlock();

@@ -6,6 +6,7 @@
 #include "time.h"
 #include "i8259a.h"
 #include "debug.h"
+#include "spinlock.h"
 
 extern void initial_thread_setup();
 extern void switch_threads_s(void ** curr, void * next);
@@ -14,7 +15,9 @@ thread_t * threads_head = 0;
 int all_started = 0;  
 int all_proc_ended = 0;  
 
-#define THREAD_STACK_SIZE 2 * PAGE_SIZE
+#define THREAD_STACK_SIZE (32 * PAGE_SIZE)
+
+volatile struct spinlock threads_lock;
 
 
 void thread_add(thread_t * th) 
@@ -63,21 +66,25 @@ void thread_setup()
 void thread_wrapper(void (*run)(void *), void * params)
 {
     // printf("Wrapper reached.\n");
-    pic_ack(PIT_IRQ);
+    // pic_ack(PIT_IRQ);
 
+    // unlock(&threads_lock);
     enable_ints();
+
     run(params);
 
-    disable_ints();
-    thread_kill(threads_head);
-    enable_ints();
+    // disable_ints();
+    thread_kill();
+    // thread_kill(threads_head);
+    // enable_ints();
 
     printf("Beware zombie thread! Oo");
 }
 
 thread_t * thread_create(void (*run)(void *), void * params)
 {
-    disable_ints();
+    // disable_ints();
+    lock(&threads_lock);
 
     thread_t * new_thread = new_thread_init(); 
 
@@ -103,7 +110,8 @@ thread_t * thread_create(void (*run)(void *), void * params)
     }
 
     // printf("New thread created.\n");
-    enable_ints();
+    // enable_ints();
+    unlock(&threads_lock);
     return new_thread;
 }
 
@@ -125,25 +133,24 @@ void thread_del(thread_t * th)
     }
 }
 
-void thread_kill(thread_t * thread)
+void thread_kill()
 {
     // printf("Eggsterminate!");
+    // disable_ints();
+    lock(&threads_lock);
+
+    threads_head->state = TH_DYING;
+
     disable_ints();
+    unlock(&threads_lock);
+    switch_threads();
 
-    if (threads_head == thread)
-    {
-        thread->state = TH_DYING;
-        switch_threads();
-    }
-    else
-    {
-        thread_del(thread);
-        // printf("Going to make headshot (from outer).\n");
-        thread->state = TH_DEAD;
-        // printf("Headshot (from outer).\n");
-    }
+    // thread_del(thread);
+    // // printf("Going to make headshot (from outer).\n");
+    // thread->state = TH_DEAD;
+    // // printf("Headshot (from outer).\n");
+    // BUG("Thread cannot be killed from outside.")
 
-    enable_ints();
 }
 
 void thread_wait(thread_t * thread)
@@ -168,7 +175,7 @@ void switch_threads()
     BUG_ON(!all_started)
     if (threads_head == (thread_t *)(threads_head->ll.next))
     {        
-        // printf("One thread detected.\n");
+        printf("One thread detected.\n");
         enable_ints();
         return;
     }
@@ -177,7 +184,7 @@ void switch_threads()
     threads_head = (thread_t *)(curr->ll.next);
     thread_t * next = threads_head;
 
-    if (curr->state == TH_DEAD )
+    if (curr->state == TH_DEAD)
     {
         printf("curr: %s\n", curr->name);
         BUG("");
@@ -213,7 +220,7 @@ void switch_threads()
     uint64_t * curr_stack = &(curr->stack);
     void * next_stack = (void *)next->stack;
 
-    printf("!");
+    // printf("!");
     switch_threads_s((void **)curr_stack, next_stack);
 
     enable_ints();

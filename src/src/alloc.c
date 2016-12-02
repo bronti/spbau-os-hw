@@ -367,25 +367,27 @@ static int mem_order_calculate(size_t size)
 
 void mem_alloc_setup(void)
 {
-	lock(&mem_lock);
+	// lock(&mem_lock);
 	for (int i = 0; i != MEM_POOLS; ++i) {
 		const size_t size = mem_pool_size[i];
 		const size_t align = mem_pool_size[0];
 
 		mem_cache_setup(&mem_pool[i], size, align);
 	}
-	unlock(&mem_lock);
+	// unlock(&mem_lock);
 }
 
 void mem_alloc_shrink(void)
 {
-	lock(&mem_lock);
+	// lock(&mem_lock);
 	for (int i = 0; i != MEM_POOLS; ++i)
+	{
 		mem_cache_shrink(&mem_pool[i]);
-	unlock(&mem_lock);
+	}
+	// unlock(&mem_lock);
 }
 
-void *mem_alloc_(size_t size)
+void *mem_alloc(size_t size)
 {
 	struct mem_cache *cache = mem_pool_lookup(size);
 
@@ -402,15 +404,15 @@ void *mem_alloc_(size_t size)
 	return va(page_addr(page));
 }
 
-void * mem_alloc(size_t size)
-{
-	lock(&mem_lock);
-	void * res = mem_alloc_(size);
-	unlock(&mem_lock);
-	return res;
-}
+// void * mem_alloc(size_t size)
+// {
+// 	lock(&mem_lock);
+// 	void * res = mem_alloc_(size);
+// 	unlock(&mem_lock);
+// 	return res;
+// }
 
-void mem_free_(void *ptr)
+void mem_free(void *ptr)
 {
 	if (!ptr)
 		return;
@@ -430,17 +432,17 @@ void mem_free_(void *ptr)
 	page_free((~mask & pa(ptr)), order);
 }
 
-void mem_free(void * ptr)
-{
-	lock(&mem_lock);
-	mem_free_(ptr);
-	unlock(&mem_lock);
-}
+// void mem_free(void * ptr)
+// {
+// 	lock(&mem_lock);
+// 	mem_free_(ptr);
+// 	unlock(&mem_lock);
+// }
 
-void *mem_realloc_(void *ptr, size_t size)
+void *mem_realloc(void *ptr, size_t size)
 {
 	if (!ptr)
-		return mem_alloc_(size);
+		return mem_alloc(size);
 
 	struct page *page = addr_page(pa(ptr) & ~(uintptr_t)PAGE_MASK);
 	size_t old_size;
@@ -459,20 +461,20 @@ void *mem_realloc_(void *ptr, size_t size)
 		if (old_size >= size) return ptr;
 	}
 
-	void *new = mem_alloc_(size);
+	void *new = mem_alloc(size);
 
 	if (!new) return 0;
 
 	memcpy(new, ptr, old_size);
-	mem_free_(ptr);
+	mem_free(ptr);
 
 	return new;
 }
 
-void * mem_realloc(void *ptr, size_t size)
-{
-	lock(&mem_lock);
-	void * res = mem_realloc_(ptr, size);
-	unlock(&mem_lock);
-	return res;
-}
+// void * mem_realloc(void *ptr, size_t size)
+// {
+// 	lock(&mem_lock);
+// 	void * res = mem_realloc_(ptr, size);
+// 	unlock(&mem_lock);
+// 	return res;
+// }
